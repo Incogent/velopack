@@ -247,6 +247,7 @@ public class MsiTests
             EntryExecutableName = exe,
             ReleaseDir = new DirectoryInfo(tmpReleaseDir),
             PackId = id,
+            PackAuthors = "Test Publisher",
             PackVersion = version,
             TargetRuntime = RID.Parse("win-x64"),
             PackDirectory = tmpOutput,
@@ -256,6 +257,7 @@ public class MsiTests
             InstReadme = readmeFile,
             InstLicense = licenseFile,
             InstConclusion = conclusionFile,
+            InstLocation = InstallLocation.PerMachine,
         };
 
         var runner = WindowsTestHelper.GetPackRunner(logger);
@@ -283,6 +285,21 @@ public class MsiTests
         // (the WixVariable is compiled into WixVariable table)
         var licenseDialog = db.ExecuteScalar("SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = 'LicenseAgreementDlg'") as string;
         Assert.Equal("LicenseAgreementDlg", licenseDialog);
+
+        var installDirDialog = db.ExecuteScalar("SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = 'InstallDirDlg'") as string;
+        Assert.Equal("InstallDirDlg", installDirDialog);
+
+        var applicationFolderName = db.ExecuteScalar(
+            "SELECT `Value` FROM `Property` WHERE `Property` = 'ApplicationFolderName'") as string;
+        Assert.Equal("Test Publisher\\Test.Squirrel-App", applicationFolderName);
+
+        var modifyPath = db.ExecuteScalar(
+            "SELECT `Value` FROM `Registry` WHERE `Name` = 'ModifyPath'") as string;
+        Assert.Equal("msiexec.exe /i [ProductCode]", modifyPath);
+
+        var disabledMaintenanceValues = db.ExecuteStringQuery(
+            "SELECT `Name` FROM `Registry` WHERE `Name` = 'NoModify' OR `Name` = 'NoRepair'");
+        Assert.Empty(disabledMaintenanceValues);
     }
 
     [Fact]
