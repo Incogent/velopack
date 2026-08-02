@@ -318,6 +318,35 @@ public class MsiTests
         var installDirDialog = db.ExecuteScalar("SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = 'InstallDirDlg'") as string;
         Assert.Equal("InstallDirDlg", installDirDialog);
 
+        var shortcutOptionsDialog = db.ExecuteScalar(
+            "SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = 'ShortcutOptionsDlg'") as string;
+        Assert.Equal("ShortcutOptionsDlg", shortcutOptionsDialog);
+
+        var shortcutControls = db.ExecuteStringQuery(
+            "SELECT `Control` FROM `Control` WHERE `Dialog_` = 'ShortcutOptionsDlg' AND (`Property` = 'BLACKBIRD_STARTMENU_SHORTCUT' OR `Property` = 'BLACKBIRD_DESKTOP_SHORTCUT')");
+        Assert.Equal(2, shortcutControls.Count);
+
+        var startMenuDefault = db.ExecuteScalar(
+            "SELECT `Value` FROM `Property` WHERE `Property` = 'BLACKBIRD_STARTMENU_SHORTCUT'") as string;
+        Assert.Equal("1", startMenuDefault);
+
+        var desktopShortcutCondition = db.ExecuteScalar(
+            "SELECT `Condition` FROM `Component` WHERE `Component` = 'ApplicationDesktopShortcut'") as string;
+        Assert.Equal("BLACKBIRD_DESKTOP_SHORTCUT = \"1\"", desktopShortcutCondition);
+
+        var startMenuShortcutCondition = db.ExecuteScalar(
+            "SELECT `Condition` FROM `Component` WHERE `Component` = 'ApplicationStartMenuRootShortcut'") as string;
+        Assert.Equal("BLACKBIRD_STARTMENU_SHORTCUT = \"1\"", startMenuShortcutCondition);
+
+        var shortcutNavigation = db.ExecuteStringQuery(
+            "SELECT `Argument` FROM `ControlEvent` WHERE (`Dialog_` = 'InstallDirDlg' AND `Control_` = 'Next' AND `Argument` = 'ShortcutOptionsDlg') OR (`Dialog_` = 'ShortcutOptionsDlg' AND `Control_` = 'Next' AND `Argument` = 'VerifyReadyDlg') OR (`Dialog_` = 'VerifyReadyDlg' AND `Control_` = 'Back' AND `Argument` = 'ShortcutOptionsDlg')");
+        Assert.Equal(3, shortcutNavigation.Count);
+
+        var uninstallNotice = db.ExecuteScalar(
+            "SELECT `Text` FROM `Control` WHERE `Dialog_` = 'MaintenanceTypeDlg' AND `Control` = 'RemoveText'") as string;
+        Assert.Contains("Remove them manually", uninstallNotice);
+        Assert.DoesNotContain("AppData", uninstallNotice);
+
         var nativeInstallDirEvents = db.ExecuteStringQuery(
             "SELECT `Event` FROM `ControlEvent` WHERE `Dialog_` = 'InstallDirDlg' AND `Control_` = 'Next' AND `Event` = 'SetTargetPath' AND `Argument` = 'INSTALLFOLDER'");
         Assert.Single(nativeInstallDirEvents);

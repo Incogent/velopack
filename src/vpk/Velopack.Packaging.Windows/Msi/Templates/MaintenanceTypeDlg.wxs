@@ -24,7 +24,7 @@
                     DisableCondition="ARPNOREMOVE OR BURNMSIREPAIR OR BURNMSIMODIFY">
                     <Publish Property="WixUI_InstallMode" Value="Remove" />
                 </Control>
-                <Control Id="RemoveText" Type="Text" X="60" Y="165" Width="280" Height="55" NoPrefix="yes" Text="Uninstall Blackbird. The Blackbird Library and user-created data under AppData\Incogent\Blackbird are preserved and can be removed manually."
+                <Control Id="RemoveText" Type="Text" X="60" Y="165" Width="280" Height="55" NoPrefix="yes" Text="Uninstall Blackbird. Blackbird Libraries and other user-created data are preserved. Remove them manually if they are no longer needed."
                     HideCondition="ARPNOREMOVE OR BURNMSIREPAIR OR BURNMSIMODIFY"
                     />
                 <Control Id="RemoveDisabledText" Type="Text" X="60" Y="165" Width="280" Height="55" NoPrefix="yes" Text="[MsiMaintRemoveDisabled]" Hidden="yes"

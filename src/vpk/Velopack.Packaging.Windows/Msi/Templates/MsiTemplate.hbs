@@ -23,7 +23,7 @@
 
         {{#if DesktopShortcut}}
             <StandardDirectory Id="DesktopFolder">
-                <Component Id="ApplicationDesktopShortcut">
+                <Component Id="ApplicationDesktopShortcut" Condition="BLACKBIRD_DESKTOP_SHORTCUT = &quot;1&quot;">
                     <Shortcut Id="ApplicationDesktopShortcut" Name="{{AppTitle}}" Description="[MsiDesktopShortcutDescription]"
                               Target="[INSTALLFOLDER]{{StubFileName}}" WorkingDirectory="INSTALLFOLDER"/>
                     <RemoveFolder Id="CleanUpDesktopShortcut" Directory="INSTALLFOLDER" On="uninstall"/>
@@ -39,7 +39,7 @@
                 <Directory Id="AppPublisherProgramMenuDir" Name="{{AppPublisherSanitized}}"/>
             </Directory>
             <DirectoryRef Id="AppPublisherProgramMenuDir">
-                <Component Id="ApplicationStartMenuShortcut">
+                <Component Id="ApplicationStartMenuShortcut" Condition="BLACKBIRD_STARTMENU_SHORTCUT = &quot;1&quot;">
                     <Shortcut
                             Id="ApplicationStartMenuShortcut"
                             Name="{{AppTitle}}"
@@ -56,7 +56,7 @@
         {{#if StartMenuRootShortcut}}
             <!-- Shortcut is placed directly in Start > Programs -->
             <StandardDirectory Id="ProgramMenuFolder">
-                <Component Id="ApplicationStartMenuRootShortcut">
+                <Component Id="ApplicationStartMenuRootShortcut" Condition="BLACKBIRD_STARTMENU_SHORTCUT = &quot;1&quot;">
                     <Shortcut
                             Id="ApplicationStartMenuRootShortcut"
                             Name="{{AppTitle}}"
@@ -136,6 +136,8 @@
         <Property Id="ApplicationFolderName" Value="{{AppId}}"/>
         {{/if}}
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER"/>
+        <Property Id="BLACKBIRD_STARTMENU_SHORTCUT" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_DESKTOP_SHORTCUT" Secure="yes"/>
 
         <!-- Optional install-dir override for sysadmins, e.g. msiexec /i app.msi VELOPACK_INSTALLDIR="D:\App".
              When set, the forced default path (LocalAppData/ProgramFiles) is skipped in both UI and silent
@@ -215,6 +217,7 @@
 
             <DialogRef Id="BrowseDlg"/>
             <DialogRef Id="InstallDirDlg"/>
+            <DialogRef Id="ShortcutOptionsDlg"/>
             <DialogRef Id="DiskCostDlg"/>
             <DialogRef Id="ErrorDlg"/>
             <DialogRef Id="FatalError"/>
@@ -312,7 +315,7 @@
             <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2"/>
             <!-- SetTargetPath performs Windows Installer's native directory validation. -->
             <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="1"/>
-            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2"/>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="ShortcutOptionsDlg" Order="2"/>
             {{#if InstallLocationEither}}
                 <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="InstallScopeDlg"/>
             {{else if HasLicense}}
@@ -322,6 +325,9 @@
             {{else}}
                 <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"/>
             {{/if}}
+
+            <Publish Dialog="ShortcutOptionsDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg"/>
+            <Publish Dialog="ShortcutOptionsDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"/>
 
             {{#if InstallLocationCurrentUserOnly}}
                 <Publish Dialog="WelcomeDlg" Control="Next" Property="INSTALLFOLDER"
@@ -341,7 +347,7 @@
                 <Publish Dialog="WelcomeDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="2"/>
             {{/if}}
 
-            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg" Order="1"
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutOptionsDlg" Order="1"
                      Condition="NOT Installed"/>
 
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2"
