@@ -295,6 +295,14 @@ public class MsiTests
         var installDirDialog = db.ExecuteScalar("SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = 'InstallDirDlg'") as string;
         Assert.Equal("InstallDirDlg", installDirDialog);
 
+        var nativeInstallDirEvents = db.ExecuteStringQuery(
+            "SELECT `Event` FROM `ControlEvent` WHERE `Dialog_` = 'InstallDirDlg' AND `Control_` = 'Next' AND `Event` = 'SetTargetPath' AND `Argument` = 'INSTALLFOLDER'");
+        Assert.Single(nativeInstallDirEvents);
+
+        var brokenPathValidationEvents = db.ExecuteStringQuery(
+            "SELECT `Event` FROM `ControlEvent` WHERE `Argument` = 'RustValidatePath'");
+        Assert.Empty(brokenPathValidationEvents);
+
         var applicationFolderName = db.ExecuteScalar(
             "SELECT `Value` FROM `Property` WHERE `Property` = 'ApplicationFolderName'") as string;
         Assert.Equal("Test Publisher\\Test.Squirrel-App", applicationFolderName);

@@ -12,6 +12,10 @@ The fork changes only the Windows MSI experience needed by Blackbird:
 - offer Repair and Uninstall without an irrelevant Change option; and
 - warn that Blackbird's Library and user-created AppData are preserved during uninstall.
 
+The installation-directory page relies on Windows Installer's native `SetTargetPath` validation.
+Velopack 1.2.0's Rust path validator reads `WIXUI_INSTALLDIR` as a literal path even though WiX
+stores the indirect directory-property name there, which incorrectly rejects valid directories.
+
 Update from upstream only for a concrete Blackbird requirement, such as a relevant security fix,
 package-format or updater compatibility, signing support, platform support, or a blocking defect.
 Validate clean install, in-app update, repair, and uninstall before adopting any new upstream base.
