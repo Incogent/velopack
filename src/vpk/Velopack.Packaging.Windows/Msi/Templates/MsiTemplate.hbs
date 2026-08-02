@@ -104,6 +104,22 @@
             </Component>
         </DirectoryRef>
 
+        {{#if InstallLocationAllUsersOnly}}
+        <!-- Blackbird's explicit trial is shared by the machine and must survive uninstall. The
+             application writes only the state values inside this narrowly scoped key. -->
+        <DirectoryRef Id="INSTALLFOLDER">
+            <Component Id="BlackbirdMachineState" Permanent="yes" Bitness="always64">
+                <RegistryKey Root="HKLM" ForceCreateOnInstall="yes"
+                             Key="SOFTWARE&#92;Incogent&#92;State&#92;{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}">
+                    <RegistryValue Name="v" Type="integer" Value="1" KeyPath="yes"/>
+                    <!-- SYSTEM and Administrators retain full control. Built-in Users can read and
+                         update values but cannot change this key's ACL or delete the key itself. -->
+                    <PermissionEx Sddl="D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)"/>
+                </RegistryKey>
+            </Component>
+        </DirectoryRef>
+        {{/if}}
+
         {{#if HasLicense}}
             <WixVariable Id="WixUILicenseRtf" Value="{{LicenseRtfFilePath}}"/>
         {{/if}}

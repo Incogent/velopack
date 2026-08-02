@@ -45,6 +45,34 @@ public class MsiTests
         Assert.Equal(options.MsiLogo, data.SideBannerImagePath);
     }
 
+    [Fact]
+    public void TestMachineTrialStateIsPermanentAndWritable()
+    {
+        using var _1 = TempUtil.GetTempDirectory(out var portableDir);
+        using var _2 = TempUtil.GetTempDirectory(out var outputDir);
+        var options = new WindowsPackOptions {
+            PackId = "Incogent.Blackbird",
+            PackVersion = "1.0.0",
+            PackTitle = "Blackbird",
+            PackAuthors = "Incogent",
+            EntryExecutableName = "Blackbird.exe",
+            TargetRuntime = RID.Parse("win-x64"),
+            InstLocation = InstallLocation.PerMachine,
+        };
+        var data = MsiBuilder.ConvertOptionsToTemplateData(
+            new DirectoryInfo(portableDir), default, "", options);
+        var template = MsiBuilder.GenerateWixTemplate(data);
+
+        Assert.Contains("Component Id=\"BlackbirdMachineState\" Permanent=\"yes\"", template);
+        Assert.Contains("{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", template);
+        Assert.Contains("PermissionEx Sddl=\"D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)\"", template);
+
+        var logger = _output.BuildLoggerFor<MsiTests>();
+        var msiPath = Path.Combine(outputDir, "Blackbird.msi");
+        MsiBuilder.CompileWixMsi(logger, data, _ => { }, msiPath);
+        Assert.True(File.Exists(msiPath));
+    }
+
     private static string RunMsiExec(string rawArgs, ILogger logger, int? exitCode = 0)
     {
         var outputFile = PathHelper.GetTestRootPath($"run.{WindowsTestHelper.RandomString(8)}.log");
@@ -366,6 +394,18 @@ public class MsiTests
         var disabledMaintenanceValues = db.ExecuteStringQuery(
             "SELECT `Name` FROM `Registry` WHERE `Name` = 'NoModify' OR `Name` = 'NoRepair'");
         Assert.Empty(disabledMaintenanceValues);
+
+        var machineStateAttributes = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Attributes` FROM `Component` WHERE `Component` = 'BlackbirdMachineState'"));
+        Assert.True((machineStateAttributes & 16) != 0); // msidbComponentAttributesPermanent
+
+        var machineStateKey = db.ExecuteScalar(
+            "SELECT `Key` FROM `Registry` WHERE `Name` = 'v' AND `Value` = '#1'") as string;
+        Assert.Equal("SOFTWARE\\Incogent\\State\\{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", machineStateKey);
+
+        var machineStatePermission = db.ExecuteScalar(
+            "SELECT `SDDLText` FROM `MsiLockPermissionsEx` WHERE `SDDLText` = 'D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)'") as string;
+        Assert.NotNull(machineStatePermission);
     }
 
     [Fact]
