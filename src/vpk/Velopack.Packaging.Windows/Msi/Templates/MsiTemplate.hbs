@@ -98,9 +98,8 @@
                     <RegistryValue Name="Publisher" Value="{{AppPublisher}}" Type="string"/>
                     <RegistryValue Name="UninstallString" Value="msiexec.exe /x [ProductCode]" Type="string"/>
                     <RegistryValue Name="QuietUninstallString" Value="msiexec.exe /x [ProductCode] /qn" Type="string"/>
+                    <RegistryValue Name="ModifyPath" Value="msiexec.exe /i [ProductCode]" Type="string" KeyPath="yes"/>
                     <RegistryValue Name="InstallLocation" Value="[INSTALLFOLDER]" Type="string"/>
-                    <RegistryValue Name="NoModify" Value="1" Type="integer"/>
-                    <RegistryValue Name="NoRepair" Value="1" Type="integer" KeyPath="yes"/>
                 </RegistryKey>
             </Component>
         </DirectoryRef>
@@ -131,7 +130,11 @@
         {{else}}
         <Property Id="WixAppFolder" Value="WixPerMachineFolder"/>
         {{/if}}
+        {{#if InstallLocationAllUsersOnly}}
+        <Property Id="ApplicationFolderName" Value="{{AppPublisherSanitized}}&#92;{{AppTitleSanitized}}"/>
+        {{else}}
         <Property Id="ApplicationFolderName" Value="{{AppId}}"/>
+        {{/if}}
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER"/>
 
         <!-- Optional install-dir override for sysadmins, e.g. msiexec /i app.msi VELOPACK_INSTALLDIR="D:\App".
@@ -212,6 +215,7 @@
             <Property Id="DefaultUIFont" Value="WixUI_Font_Normal"/>
 
             <DialogRef Id="BrowseDlg"/>
+            <DialogRef Id="InstallDirDlg"/>
             <DialogRef Id="DiskCostDlg"/>
             <DialogRef Id="ErrorDlg"/>
             <DialogRef Id="FatalError"/>
@@ -226,22 +230,17 @@
                 <DialogRef Id="ReadmeDlg"/>
             {{/if}}
 
-            <!-- ValidatePath actions for BrowseDlg and InstallScopeDlg -->
+            <!-- ValidatePath actions for BrowseDlg and InstallDirDlg -->
             <Publish Dialog="BrowseDlg" Control="OK" Event="DoAction" Value="RustValidatePath" Order="3"
                      Condition="NOT WIXUI_DONTVALIDATEPATH"/>
             <Publish Dialog="BrowseDlg" Control="OK" Event="SpawnDialog" Value="InvalidDirDlg" Order="4"
                      Condition="NOT WIXUI_DONTVALIDATEPATH AND WIXUI_INSTALLDIR_VALID&lt;&gt;&quot;1&quot;"/>
 
-            {{#if InstallLocationEither}}
-                <Publish Dialog="InstallScopeDlg" Control="Next" Event="DoAction" Value="RustValidatePath"
-                         Order="7" Condition="NOT WIXUI_DONTVALIDATEPATH"/>
-            {{/if}}
-
             <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999"/>
             <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="RustLaunchApplication"
                      Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed"/>
 
-            {{!-- Welcome -> (Readme | License | InstallScope | VerifyReady) --}}
+            {{!-- Welcome -> (Readme | License | InstallScope | InstallDir) --}}
             {{#if HasReadme}}
                 <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="ReadmeDlg" Condition="NOT Installed"/>
             {{else if HasLicense}}
@@ -249,7 +248,7 @@
             {{else if InstallLocationEither}}
                 <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallScopeDlg" Condition="NOT Installed"/>
             {{else}}
-                <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="NOT Installed"/>
+                <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Condition="NOT Installed"/>
             {{/if}}
 
             <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH"/>
@@ -261,7 +260,7 @@
                 {{else if InstallLocationEither}}
                     <Publish Dialog="ReadmeDlg" Control="Next" Event="NewDialog" Value="InstallScopeDlg"/>
                 {{else}}
-                    <Publish Dialog="ReadmeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"/>
+                    <Publish Dialog="ReadmeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"/>
                 {{/if}}
             {{/if}}
 
@@ -275,7 +274,7 @@
                     <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="InstallScopeDlg"
                              Condition="LicenseAccepted = &quot;1&quot;"/>
                 {{else}}
-                    <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"
+                    <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"
                              Condition="LicenseAccepted = &quot;1&quot;"/>
                 {{/if}}
             {{/if}}
@@ -311,8 +310,29 @@
                 <Publish Dialog="InstallScopeDlg" Control="Next" Property="INSTALLFOLDER"
                          Value="[VELOPACK_INSTALLDIR]" Order="5" Condition="VELOPACK_INSTALLDIR"/>
                 <Publish Dialog="InstallScopeDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="6"/>
-                <Publish Dialog="InstallScopeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="8"/>
+                <Publish Dialog="InstallScopeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="8"/>
                 <Publish Dialog="InstallScopeDlg" Control="Next" Event="DoAction" Value="FindRelatedProducts" Order="9"/>
+            {{/if}}
+
+            <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Property="_BrowseProperty"
+                     Value="[WIXUI_INSTALLDIR]" Order="1"/>
+            <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2"/>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="DoAction" Value="RustValidatePath" Order="1"
+                     Condition="NOT WIXUI_DONTVALIDATEPATH"/>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="SpawnDialog" Value="InvalidDirDlg" Order="2"
+                     Condition="NOT WIXUI_DONTVALIDATEPATH AND WIXUI_INSTALLDIR_VALID&lt;&gt;&quot;1&quot;"/>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="3"
+                     Condition="WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID=&quot;1&quot;"/>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="4"
+                     Condition="WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID=&quot;1&quot;"/>
+            {{#if InstallLocationEither}}
+                <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="InstallScopeDlg"/>
+            {{else if HasLicense}}
+                <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg"/>
+            {{else if HasReadme}}
+                <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ReadmeDlg"/>
+            {{else}}
+                <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"/>
             {{/if}}
 
             {{#if InstallLocationCurrentUserOnly}}
@@ -333,19 +353,8 @@
                 <Publish Dialog="WelcomeDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="2"/>
             {{/if}}
 
-            {{#if InstallLocationEither}}
-                <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallScopeDlg" Order="1"
-                         Condition="NOT Installed"/>
-            {{else if HasLicense}}
-                <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg" Order="1"
-                         Condition="NOT Installed"/>
-            {{else if HasReadme}}
-                <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ReadmeDlg" Order="1"
-                         Condition="NOT Installed"/>
-            {{else}}
-                <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="1"
-                         Condition="NOT Installed"/>
-            {{/if}}
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg" Order="1"
+                     Condition="NOT Installed"/>
 
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2"
                      Condition="Installed AND NOT PATCH"/>
