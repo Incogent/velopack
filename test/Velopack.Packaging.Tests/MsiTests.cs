@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using Velopack.Core;
 using Velopack.Packaging.Commands;
 using Velopack.Packaging.Windows.Commands;
+using Velopack.Packaging.Windows.Msi;
 using Velopack.Util;
 using Velopack.Vpk;
 using Velopack.Vpk.Logging;
@@ -20,6 +21,28 @@ public class MsiTests
     public MsiTests(ITestOutputHelper output)
     {
         _output = output;
+    }
+
+    [Fact]
+    public void TestMsiArtworkOptionsMapToWixSlots()
+    {
+        using var _ = TempUtil.GetTempDirectory(out var portableDir);
+        var options = new WindowsPackOptions {
+            PackId = "Test.App",
+            PackVersion = "1.0.0",
+            PackTitle = "Test App",
+            PackAuthors = "Test Publisher",
+            EntryExecutableName = "Test.App.exe",
+            TargetRuntime = RID.Parse("win-x64"),
+            InstLocation = InstallLocation.PerMachine,
+            MsiBanner = "top-banner-493x58.bmp",
+            MsiLogo = "background-logo-493x312.bmp",
+        };
+
+        var data = MsiBuilder.ConvertOptionsToTemplateData(new DirectoryInfo(portableDir), default, "", options);
+
+        Assert.Equal(options.MsiBanner, data.TopBannerImagePath);
+        Assert.Equal(options.MsiLogo, data.SideBannerImagePath);
     }
 
     private static string RunMsiExec(string rawArgs, ILogger logger, int? exitCode = 0)

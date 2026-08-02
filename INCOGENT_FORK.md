@@ -7,6 +7,7 @@ track every upstream release.
 The fork changes only the Windows MSI experience needed by Blackbird:
 
 - show an installation-directory page;
+- map the MSI banner and background-logo options to their correct WiX image slots;
 - default per-machine installs to `Publisher\Product` under Program Files;
 - expose the standard Apps & Features maintenance entry;
 - offer Repair and Uninstall without an irrelevant Change option; and
