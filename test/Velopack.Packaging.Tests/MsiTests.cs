@@ -71,6 +71,33 @@ public class MsiTests
         var msiPath = Path.Combine(outputDir, "Blackbird.msi");
         MsiBuilder.CompileWixMsi(logger, data, _ => { }, msiPath);
         Assert.True(File.Exists(msiPath));
+
+        using Database db = new Database(msiPath);
+
+        var uninstallPath = db.ExecuteScalar(
+            "SELECT `Value` FROM `Registry` WHERE `Name` = 'UninstallString'") as string;
+        Assert.Equal("msiexec.exe /i [ProductCode]", uninstallPath);
+
+        var quietUninstallPath = db.ExecuteScalar(
+            "SELECT `Value` FROM `Registry` WHERE `Name` = 'QuietUninstallString'") as string;
+        Assert.Equal("msiexec.exe /x [ProductCode] /qn", quietUninstallPath);
+
+        var confirmationUninstallNotice = db.ExecuteScalar(
+            "SELECT `Text` FROM `Control` WHERE `Dialog_` = 'VerifyReadyDlg' AND `Control` = 'RemoveText'") as string;
+        Assert.Contains("user-created data will be preserved", confirmationUninstallNotice);
+        Assert.Contains("Remove them manually", confirmationUninstallNotice);
+
+        var launchCheckboxWidth = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Width` FROM `Control` WHERE `Dialog_` = 'ExitDialog' AND `Control` = 'OptionalCheckBox'"));
+        Assert.Equal(13, launchCheckboxWidth);
+
+        var launchCheckboxLabelAttributes = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Attributes` FROM `Control` WHERE `Dialog_` = 'ExitDialog' AND `Control` = 'OptionalCheckBoxLabel'"));
+        Assert.True((launchCheckboxLabelAttributes & 65536) != 0); // msidbControlAttributesTransparent
+
+        var verboseProgressControls = db.ExecuteStringQuery(
+            "SELECT `Control` FROM `Control` WHERE `Dialog_` = 'ProgressDlg' AND (`Control` = 'ActionText' OR `Control` = 'StatusLabel')");
+        Assert.Empty(verboseProgressControls);
     }
 
     private static string RunMsiExec(string rawArgs, ILogger logger, int? exitCode = 0)
@@ -370,10 +397,15 @@ public class MsiTests
             "SELECT `Argument` FROM `ControlEvent` WHERE (`Dialog_` = 'InstallDirDlg' AND `Control_` = 'Next' AND `Argument` = 'ShortcutOptionsDlg') OR (`Dialog_` = 'ShortcutOptionsDlg' AND `Control_` = 'Next' AND `Argument` = 'VerifyReadyDlg') OR (`Dialog_` = 'VerifyReadyDlg' AND `Control_` = 'Back' AND `Argument` = 'ShortcutOptionsDlg')");
         Assert.Equal(3, shortcutNavigation.Count);
 
-        var uninstallNotice = db.ExecuteScalar(
+        var maintenanceUninstallNotice = db.ExecuteScalar(
             "SELECT `Text` FROM `Control` WHERE `Dialog_` = 'MaintenanceTypeDlg' AND `Control` = 'RemoveText'") as string;
-        Assert.Contains("Remove them manually", uninstallNotice);
-        Assert.DoesNotContain("AppData", uninstallNotice);
+        Assert.Contains("Remove them manually", maintenanceUninstallNotice);
+        Assert.DoesNotContain("AppData", maintenanceUninstallNotice);
+
+        var confirmationUninstallNotice = db.ExecuteScalar(
+            "SELECT `Text` FROM `Control` WHERE `Dialog_` = 'VerifyReadyDlg' AND `Control` = 'RemoveText'") as string;
+        Assert.Contains("user-created data will be preserved", confirmationUninstallNotice);
+        Assert.Contains("Remove them manually", confirmationUninstallNotice);
 
         var nativeInstallDirEvents = db.ExecuteStringQuery(
             "SELECT `Event` FROM `ControlEvent` WHERE `Dialog_` = 'InstallDirDlg' AND `Control_` = 'Next' AND `Event` = 'SetTargetPath' AND `Argument` = 'INSTALLFOLDER'");
@@ -387,9 +419,29 @@ public class MsiTests
             "SELECT `Value` FROM `Property` WHERE `Property` = 'ApplicationFolderName'") as string;
         Assert.Equal("Test Publisher\\Test.Squirrel-App", applicationFolderName);
 
+        var uninstallPath = db.ExecuteScalar(
+            "SELECT `Value` FROM `Registry` WHERE `Name` = 'UninstallString'") as string;
+        Assert.Equal("msiexec.exe /i [ProductCode]", uninstallPath);
+
+        var quietUninstallPath = db.ExecuteScalar(
+            "SELECT `Value` FROM `Registry` WHERE `Name` = 'QuietUninstallString'") as string;
+        Assert.Equal("msiexec.exe /x [ProductCode] /qn", quietUninstallPath);
+
         var modifyPath = db.ExecuteScalar(
             "SELECT `Value` FROM `Registry` WHERE `Name` = 'ModifyPath'") as string;
         Assert.Equal("msiexec.exe /i [ProductCode]", modifyPath);
+
+        var launchCheckboxWidth = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Width` FROM `Control` WHERE `Dialog_` = 'ExitDialog' AND `Control` = 'OptionalCheckBox'"));
+        Assert.Equal(13, launchCheckboxWidth);
+
+        var launchCheckboxLabelAttributes = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Attributes` FROM `Control` WHERE `Dialog_` = 'ExitDialog' AND `Control` = 'OptionalCheckBoxLabel'"));
+        Assert.True((launchCheckboxLabelAttributes & 65536) != 0); // msidbControlAttributesTransparent
+
+        var verboseProgressControls = db.ExecuteStringQuery(
+            "SELECT `Control` FROM `Control` WHERE `Dialog_` = 'ProgressDlg' AND (`Control` = 'ActionText' OR `Control` = 'StatusLabel')");
+        Assert.Empty(verboseProgressControls);
 
         var disabledMaintenanceValues = db.ExecuteStringQuery(
             "SELECT `Name` FROM `Registry` WHERE `Name` = 'NoModify' OR `Name` = 'NoRepair'");

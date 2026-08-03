@@ -24,13 +24,9 @@
                 <Control Id="TitleRemoving" Type="Text" X="20" Y="15" Width="330" Height="15" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="[MsiProgressRemovingTitle]" ShowCondition="WixUI_InstallMode = &quot;Remove&quot;" />
                 <Control Id="TextUpdating" Type="Text" X="20" Y="65" Width="330" Height="35" Hidden="yes" NoPrefix="yes" Text="[MsiProgressUpdatingText]" ShowCondition="WixUI_InstallMode = &quot;Update&quot;" />
                 <Control Id="TitleUpdating" Type="Text" X="20" Y="15" Width="330" Height="15" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="[MsiProgressUpdatingTitle]" ShowCondition="WixUI_InstallMode = &quot;Update&quot;" />
-                <Control Id="ActionText" Type="Text" X="70" Y="100" Width="285" Height="10">
-                    <Subscribe Event="ActionText" Attribute="Text" />
-                </Control>
                 <Control Id="ProgressBar" Type="ProgressBar" X="20" Y="115" Width="330" Height="10" ProgressBlocks="yes" Text="Progress">
                     <Subscribe Event="SetProgress" Attribute="Progress" />
                 </Control>
-                <Control Id="StatusLabel" Type="Text" X="20" Y="100" Width="50" Height="10" Text="[MsiProgressStatus]" />
             </Dialog>
 
             <InstallUISequence>

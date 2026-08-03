@@ -96,7 +96,9 @@
                     <RegistryValue Name="DisplayVersion" Value="{{AppVersion}}" Type="string"/>
                     <RegistryValue Name="DisplayIcon" Value="[INSTALLFOLDER]{{StubFileName}}" Type="string"/>
                     <RegistryValue Name="Publisher" Value="{{AppPublisher}}" Type="string"/>
-                    <RegistryValue Name="UninstallString" Value="msiexec.exe /x [ProductCode]" Type="string"/>
+                    <!-- Keep interactive uninstall on the same maintenance path as Modify so users
+                         see Repair/Remove choices and Blackbird's retained-data warning. -->
+                    <RegistryValue Name="UninstallString" Value="msiexec.exe /i [ProductCode]" Type="string"/>
                     <RegistryValue Name="QuietUninstallString" Value="msiexec.exe /x [ProductCode] /qn" Type="string"/>
                     <RegistryValue Name="ModifyPath" Value="msiexec.exe /i [ProductCode]" Type="string" KeyPath="yes"/>
                     <RegistryValue Name="InstallLocation" Value="[INSTALLFOLDER]" Type="string"/>
