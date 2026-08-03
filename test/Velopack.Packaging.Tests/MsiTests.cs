@@ -63,7 +63,7 @@ public class MsiTests
             new DirectoryInfo(portableDir), default, "", options);
         var template = MsiBuilder.GenerateWixTemplate(data);
 
-        Assert.Contains("Component Id=\"BlackbirdMachineState\" Permanent=\"yes\"", template);
+        Assert.Contains("Component Id=\"BlackbirdMachineTrialState\" Permanent=\"yes\"", template);
         Assert.Contains("{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", template);
         Assert.Contains("PermissionEx Sddl=\"D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)\"", template);
 
@@ -396,16 +396,23 @@ public class MsiTests
         Assert.Empty(disabledMaintenanceValues);
 
         var machineStateAttributes = Convert.ToInt32(db.ExecuteScalar(
-            "SELECT `Attributes` FROM `Component` WHERE `Component` = 'BlackbirdMachineState'"));
+            "SELECT `Attributes` FROM `Component` WHERE `Component` = 'BlackbirdMachineTrialState'"));
         Assert.True((machineStateAttributes & 16) != 0); // msidbComponentAttributesPermanent
+
+        var machineStateFeatures = db.ExecuteStringQuery(
+            "SELECT `Feature_` FROM `FeatureComponents` WHERE `Component_` = 'BlackbirdMachineTrialState'");
+        Assert.NotEmpty(machineStateFeatures);
 
         var machineStateKey = db.ExecuteScalar(
             "SELECT `Key` FROM `Registry` WHERE `Name` = 'v' AND `Value` = '#1'") as string;
         Assert.Equal("SOFTWARE\\Incogent\\State\\{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", machineStateKey);
 
-        var machineStatePermission = db.ExecuteScalar(
-            "SELECT `SDDLText` FROM `MsiLockPermissionsEx` WHERE `SDDLText` = 'D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)'") as string;
-        Assert.NotNull(machineStatePermission);
+        var machineStateRegistryId = db.ExecuteScalar(
+            "SELECT `Registry` FROM `Registry` WHERE `Name` = 'v' AND `Value` = '#1'") as string;
+
+        var machineStatePermissionTarget = db.ExecuteScalar(
+            "SELECT `LockObject` FROM `MsiLockPermissionsEx` WHERE `SDDLText` = 'D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)'") as string;
+        Assert.Equal(machineStateRegistryId, machineStatePermissionTarget);
     }
 
     [Fact]
