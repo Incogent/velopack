@@ -54,7 +54,8 @@ public class WindowsPackCommandRunner : PackageBuilder<WindowsPackOptions>
         // copy files to temp dir, so we can modify them
         var dir = TempDir.CreateSubdirectory("PreprocessPackDirWin");
         CopyFiles(new DirectoryInfo(packDir), dir, progress, true);
-        File.WriteAllText(Path.Combine(dir.FullName, CoreUtil.SpecVersionFileName), GenerateNuspecContent());
+        var nuspecPath = Path.Combine(dir.FullName, CoreUtil.SpecVersionFileName);
+        File.WriteAllText(nuspecPath, GenerateNuspecContent());
         packDir = dir.FullName;
 
         var updatePath = Path.Combine(TempDir.FullName, "Update.exe");
@@ -74,12 +75,14 @@ public class WindowsPackCommandRunner : PackageBuilder<WindowsPackOptions>
             }
         }
 
-        // update icon for Update.exe if requested
+        // Update.exe appears in Windows-owned elevation and progress surfaces, so its
+        // executable identity must match the package instead of the Velopack tool.
+        var editor = new ResourceEdit(updatePath, Log);
+        editor.SetVersionInfo(PackageManifest.ParseFromFile(nuspecPath));
         if (Options.Icon != null) {
-            var editor = new ResourceEdit(updatePath, Log);
             editor.SetExeIcon(Options.Icon);
-            editor.Commit();
         }
+        editor.Commit();
 
         File.Copy(updatePath, Path.Combine(packDir, "Squirrel.exe"), true);
 

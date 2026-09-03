@@ -5,6 +5,7 @@ using System.Xml.Linq;
 using Microsoft.Win32;
 using NuGet.Packaging;
 using Velopack.Core;
+using Velopack.Packaging;
 using Velopack.Packaging.Commands;
 using Velopack.Packaging.Compression;
 using Velopack.Packaging.Windows.Commands;
@@ -94,6 +95,51 @@ public class WindowsPackTests
         // check for other files
         Assert.True(File.Exists(Path.Combine(unzipDir, "lib", "app", Path.GetFileName(exe))));
         Assert.False(File.Exists(Path.Combine(unzipDir, "lib", "app", Path.GetFileName(pdb))));
+    }
+
+    [Fact]
+    public void PackBuildBrandsUpdaterWithPackageIdentity()
+    {
+        Assert.SkipUnless(VelopackRuntimeInfo.IsWindows, "Windows only");
+
+        using var logger = _output.BuildLoggerFor<WindowsPackTests>();
+        using var _1 = TempUtil.GetTempDirectory(out var packDir);
+        using var _2 = TempUtil.GetTempDirectory(out var releaseDir);
+        using var _3 = TempUtil.GetTempDirectory(out var unzipDir);
+        using var _4 = TempUtil.GetTempDirectory(out var helperDir);
+
+        File.Copy(PathHelper.GetFixture("PublishSingleFileAwareApp.exe"), Path.Combine(packDir, "Blackbird.exe"));
+        File.Copy(PathHelper.GetFixture("Setup.exe"), Path.Combine(helperDir, "update.exe"));
+        File.Copy(PathHelper.GetFixture("Setup.exe"), Path.Combine(helperDir, "stub.exe"));
+        HelperFile.AddSearchPath(helperDir);
+
+        var options = new WindowsPackOptions {
+            EntryExecutableName = "Blackbird.exe",
+            ReleaseDir = new DirectoryInfo(releaseDir),
+            PackId = "Incogent.Blackbird",
+            PackVersion = "1.2.3",
+            PackAuthors = "Incogent",
+            PackTitle = "Blackbird",
+            PackDirectory = packDir,
+            TargetRuntime = RID.Parse("win-x64"),
+            Icon = PathHelper.GetFixture("clowd.ico"),
+            NoInst = true,
+            NoPortable = true,
+            SkipVelopackAppCheck = true,
+        };
+
+        var runner = WindowsTestHelper.GetPackRunner(logger);
+        runner.Run(options).GetAwaiterResult();
+
+        var nupkgPath = Directory.GetFiles(releaseDir, "*-full.nupkg").Single();
+        EasyZip.ExtractZipToDirectory(logger.ToVelopackLogger(), nupkgPath, unzipDir);
+        var updaterVersion = FileVersionInfo.GetVersionInfo(
+            Path.Combine(unzipDir, "lib", "app", "Squirrel.exe"));
+
+        Assert.Equal("Blackbird", updaterVersion.ProductName);
+        Assert.Equal("Blackbird", updaterVersion.FileDescription);
+        Assert.Equal("Incogent", updaterVersion.CompanyName);
+        Assert.Equal("1.2.3", updaterVersion.ProductVersion);
     }
 
     [Fact]
