@@ -98,6 +98,19 @@ public class MsiTests
         var verboseProgressControls = db.ExecuteStringQuery(
             "SELECT `Control` FROM `Control` WHERE `Dialog_` = 'ProgressDlg' AND (`Control` = 'ActionText' OR `Control` = 'StatusLabel')");
         Assert.Empty(verboseProgressControls);
+        Assert.Equal(6, db.ExecuteStringQuery(
+            "SELECT `Control` FROM `Control` WHERE `Dialog_` = 'PackageOptionsDlg' AND `Type` = 'CheckBox'").Count);
+        foreach (var bundle in new[] { "ANDROID", "GODOT", "STEAM", "UNITY", "UNREAL", "UTILITIES" })
+            Assert.Equal("1", db.ExecuteScalar("SELECT `Value` FROM `Property` WHERE `Property` = 'BLACKBIRD_BUNDLE_" + bundle + "'"));
+        Assert.Contains("always installed", db.ExecuteScalar(
+            "SELECT `Text` FROM `Control` WHERE `Dialog_` = 'PackageOptionsDlg' AND `Control` = 'Required'") as string);
+        Assert.Equal("NOT Installed AND NOT BLACKBIRD_EXISTING_INSTALL", db.ExecuteScalar(
+            "SELECT `Condition` FROM `ControlEvent` WHERE `Dialog_` = 'ShortcutOptionsDlg' AND `Control_` = 'Next' AND `Argument` = 'PackageOptionsDlg'"));
+        Assert.Equal("[BLACKBIRD_BUNDLE_ANDROID];[BLACKBIRD_BUNDLE_GODOT];[BLACKBIRD_BUNDLE_STEAM];[BLACKBIRD_BUNDLE_UNITY];[BLACKBIRD_BUNDLE_UNREAL];[BLACKBIRD_BUNDLE_UTILITIES]",
+            db.ExecuteScalar("SELECT `Value` FROM `Registry` WHERE `Name` = 'Bundles'"));
+        var selectionAttributes = Convert.ToInt32(db.ExecuteScalar(
+            "SELECT `Attributes` FROM `Component` WHERE `Component` = 'BlackbirdPackageSelection'"));
+        Assert.True((selectionAttributes & 128) != 0); // NeverOverwrite: maintenance preserves choices.
     }
 
     private static string RunMsiExec(string rawArgs, ILogger logger, int? exitCode = 0)

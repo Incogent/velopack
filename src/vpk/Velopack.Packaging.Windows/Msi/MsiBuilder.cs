@@ -19,7 +19,7 @@ public static class MsiBuilder
 {
     private static readonly string[] DialogFiles = [
         "WelcomeDlg.wxs", "ExitDialog.wxs", "VerifyReadyDlg.wxs", "ProgressDlg.wxs",
-        "PrepareDlg.wxs", "LicenseAgreementDlg.wxs", "InstallScopeDlg.wxs", "InstallDirDlg.wxs", "ShortcutOptionsDlg.wxs",
+        "PrepareDlg.wxs", "LicenseAgreementDlg.wxs", "InstallScopeDlg.wxs", "InstallDirDlg.wxs", "ShortcutOptionsDlg.wxs", "PackageOptionsDlg.wxs",
         "MaintenanceWelcomeDlg.wxs", "MaintenanceTypeDlg.wxs", "BrowseDlg.wxs",
         "InvalidDirDlg.wxs", "DiskCostDlg.wxs", "ErrorDlg.wxs", "FatalError.wxs",
         "UserExit.wxs", "FilesInUse.wxs", "MsiRMFilesInUse.wxs", "ResumeDlg.wxs",

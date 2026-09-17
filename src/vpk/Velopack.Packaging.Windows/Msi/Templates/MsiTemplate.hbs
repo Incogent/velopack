@@ -155,6 +155,23 @@
         <Property Id="ApplicationFolderName" Value="{{AppId}}"/>
         {{/if}}
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER"/>
+        <Property Id="BLACKBIRD_EXISTING_INSTALL" Secure="yes">
+            <RegistrySearch Id="BlackbirdExistingInstall" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\MSI:{{AppId}}" Name="InstallLocation" Type="raw" />
+        </Property>
+        <Property Id="BLACKBIRD_BUNDLE_ANDROID" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_BUNDLE_GODOT" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_BUNDLE_STEAM" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_BUNDLE_UNITY" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_BUNDLE_UNREAL" Value="1" Secure="yes"/>
+        <Property Id="BLACKBIRD_BUNDLE_UTILITIES" Value="1" Secure="yes"/>
+        <DirectoryRef Id="INSTALLFOLDER">
+            <Component Id="BlackbirdPackageSelection" Guid="{C936FE68-7151-4D88-A0E1-59A039A5C6F2}" NeverOverwrite="yes"
+                       Condition="NOT BLACKBIRD_EXISTING_INSTALL">
+                <RegistryValue Root="HKLM" Key="Software\Incogent\Blackbird\PackageSelection"
+                    Name="Bundles" Type="string" KeyPath="yes"
+                    Value="[BLACKBIRD_BUNDLE_ANDROID];[BLACKBIRD_BUNDLE_GODOT];[BLACKBIRD_BUNDLE_STEAM];[BLACKBIRD_BUNDLE_UNITY];[BLACKBIRD_BUNDLE_UNREAL];[BLACKBIRD_BUNDLE_UTILITIES]"/>
+            </Component>
+        </DirectoryRef>
         <Property Id="BLACKBIRD_STARTMENU_SHORTCUT" Value="1" Secure="yes"/>
         <Property Id="BLACKBIRD_DESKTOP_SHORTCUT" Secure="yes"/>
 
@@ -237,6 +254,7 @@
             <DialogRef Id="BrowseDlg"/>
             <DialogRef Id="InstallDirDlg"/>
             <DialogRef Id="ShortcutOptionsDlg"/>
+            <DialogRef Id="PackageOptionsDlg"/>
             <DialogRef Id="DiskCostDlg"/>
             <DialogRef Id="ErrorDlg"/>
             <DialogRef Id="FatalError"/>
@@ -346,7 +364,10 @@
             {{/if}}
 
             <Publish Dialog="ShortcutOptionsDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg"/>
-            <Publish Dialog="ShortcutOptionsDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"/>
+            <Publish Dialog="ShortcutOptionsDlg" Control="Next" Event="NewDialog" Value="PackageOptionsDlg" Order="1" Condition="NOT Installed AND NOT BLACKBIRD_EXISTING_INSTALL"/>
+            <Publish Dialog="ShortcutOptionsDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed OR BLACKBIRD_EXISTING_INSTALL"/>
+            <Publish Dialog="PackageOptionsDlg" Control="Back" Event="NewDialog" Value="ShortcutOptionsDlg"/>
+            <Publish Dialog="PackageOptionsDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"/>
 
             {{#if InstallLocationCurrentUserOnly}}
                 <Publish Dialog="WelcomeDlg" Control="Next" Property="INSTALLFOLDER"
@@ -366,8 +387,10 @@
                 <Publish Dialog="WelcomeDlg" Control="Next" Event="SetTargetPath" Value="INSTALLFOLDER" Order="2"/>
             {{/if}}
 
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="PackageOptionsDlg" Order="1"
+                     Condition="NOT Installed AND NOT BLACKBIRD_EXISTING_INSTALL"/>
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutOptionsDlg" Order="1"
-                     Condition="NOT Installed"/>
+                     Condition="NOT Installed AND BLACKBIRD_EXISTING_INSTALL"/>
 
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2"
                      Condition="Installed AND NOT PATCH"/>
