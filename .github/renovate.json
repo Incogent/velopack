@@ -81,10 +81,6 @@
       "dependencyDashboardApproval": true
     },
     {
-      "matchPackageNames": "SixLabors.ImageSharp",
-      "allowedVersions": "< 3.0.0"
-    },
-    {
       "matchPackageNames": "@electron/fuses",
       "allowedVersions": "< 2.0.0" // 2.x is ESM-only, breaks webpack/forge setup
     },
