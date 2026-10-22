@@ -46,7 +46,7 @@ public class MsiTests
     }
 
     [Fact]
-    public void TestMachineTrialStateIsPermanentAndWritable()
+    public void TestPerMachineInstallerDoesNotProvisionTrialState()
     {
         using var _1 = TempUtil.GetTempDirectory(out var portableDir);
         using var _2 = TempUtil.GetTempDirectory(out var outputDir);
@@ -63,9 +63,8 @@ public class MsiTests
             new DirectoryInfo(portableDir), default, "", options);
         var template = MsiBuilder.GenerateWixTemplate(data);
 
-        Assert.Contains("Component Id=\"BlackbirdMachineTrialState\" Permanent=\"yes\"", template);
-        Assert.Contains("{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", template);
-        Assert.Contains("PermissionEx Sddl=\"D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)\"", template);
+        Assert.DoesNotContain("BlackbirdMachineTrialState", template);
+        Assert.DoesNotContain("{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", template);
 
         var logger = _output.BuildLoggerFor<MsiTests>();
         var msiPath = Path.Combine(outputDir, "Blackbird.msi");
@@ -73,6 +72,9 @@ public class MsiTests
         Assert.True(File.Exists(msiPath));
 
         using Database db = new Database(msiPath);
+
+        Assert.Empty(db.ExecuteStringQuery(
+            "SELECT `Component` FROM `Component` WHERE `Component` = 'BlackbirdMachineTrialState'"));
 
         var uninstallPath = db.ExecuteScalar(
             "SELECT `Value` FROM `Registry` WHERE `Name` = 'UninstallString'") as string;
@@ -460,24 +462,8 @@ public class MsiTests
             "SELECT `Name` FROM `Registry` WHERE `Name` = 'NoModify' OR `Name` = 'NoRepair'");
         Assert.Empty(disabledMaintenanceValues);
 
-        var machineStateAttributes = Convert.ToInt32(db.ExecuteScalar(
-            "SELECT `Attributes` FROM `Component` WHERE `Component` = 'BlackbirdMachineTrialState'"));
-        Assert.True((machineStateAttributes & 16) != 0); // msidbComponentAttributesPermanent
-
-        var machineStateFeatures = db.ExecuteStringQuery(
-            "SELECT `Feature_` FROM `FeatureComponents` WHERE `Component_` = 'BlackbirdMachineTrialState'");
-        Assert.NotEmpty(machineStateFeatures);
-
-        var machineStateKey = db.ExecuteScalar(
-            "SELECT `Key` FROM `Registry` WHERE `Name` = 'v' AND `Value` = '#1'") as string;
-        Assert.Equal("SOFTWARE\\Incogent\\State\\{8C6C8B31-63E7-45C8-9E74-69F683ECDB44}", machineStateKey);
-
-        var machineStateRegistryId = db.ExecuteScalar(
-            "SELECT `Registry` FROM `Registry` WHERE `Name` = 'v' AND `Value` = '#1'") as string;
-
-        var machineStatePermissionTarget = db.ExecuteScalar(
-            "SELECT `LockObject` FROM `MsiLockPermissionsEx` WHERE `SDDLText` = 'D:AI(A;;KA;;;SY)(A;;KA;;;BA)(A;;KRKW;;;BU)'") as string;
-        Assert.Equal(machineStateRegistryId, machineStatePermissionTarget);
+        Assert.Empty(db.ExecuteStringQuery(
+            "SELECT `Component` FROM `Component` WHERE `Component` = 'BlackbirdMachineTrialState'"));
     }
 
     [Fact]
