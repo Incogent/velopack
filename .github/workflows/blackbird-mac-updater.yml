@@ -4,6 +4,10 @@ on:
     branches: [codex/macos-update-replacement]
   workflow_dispatch:
 
+concurrency:
+  group: blackbird-mac-updater-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -13,6 +17,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: Test native replacement with two disposable volumes
         shell: bash
         run: |
