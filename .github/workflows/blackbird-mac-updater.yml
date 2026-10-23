@@ -25,6 +25,7 @@ jobs:
           trap 'hdiutil detach "$mount"; rm -f "$image"' EXIT
           export BLACKBIRD_TEST_OTHER_VOLUME="$mount"
           cargo test --locked -p velopack_bins --lib commands::apply_osx_impl::tests -- --nocapture
+          cargo test --locked -p velopack_bins --lib commands::apply_osx_impl::tests -- --ignored --nocapture
       - name: Build ARM64 native helper
         run: |
           cargo build --locked --release -p velopack_bins --bin update --target aarch64-apple-darwin

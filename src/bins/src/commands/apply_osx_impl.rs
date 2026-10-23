@@ -243,6 +243,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires an explicitly supplied disposable second volume"]
     fn stages_and_replaces_across_app_and_cache_volumes() {
         let cache = fixture("cross_volume_cache");
         let other = std::env::var_os("BLACKBIRD_TEST_OTHER_VOLUME").expect("CI must supply a disposable second volume");
