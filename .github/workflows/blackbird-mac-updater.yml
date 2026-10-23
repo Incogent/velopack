@@ -1,0 +1,39 @@
+name: Blackbird Mac updater test artifact
+on:
+  push:
+    branches: [codex/macos-update-replacement]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac-updater:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test native replacement with two disposable volumes
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="$RUNNER_TEMP/blackbird-updater.sparseimage"
+          mount="$RUNNER_TEMP/blackbird-updater-volume"
+          mkdir -p "$mount"
+          hdiutil create -size 1g -type SPARSE -fs APFS -volname BlackbirdUpdaterTest "$image"
+          hdiutil attach -nobrowse -mountpoint "$mount" "$image"
+          trap 'hdiutil detach "$mount"; rm -f "$image"' EXIT
+          export BLACKBIRD_TEST_OTHER_VOLUME="$mount"
+          cargo test --locked -p velopack_bins --lib commands::apply_osx_impl::tests -- --nocapture
+      - name: Build ARM64 native helper
+        run: |
+          cargo build --locked --release -p velopack_bins --bin update --target aarch64-apple-darwin
+          mkdir -p artifacts
+          cp target/aarch64-apple-darwin/release/update artifacts/UpdateMac
+          git rev-parse HEAD > artifacts/source-commit.txt
+          shasum -a 256 artifacts/UpdateMac > artifacts/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blackbird-mac-updater-arm64
+          path: artifacts/
+          retention-days: 14
